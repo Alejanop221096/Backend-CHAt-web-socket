@@ -3,36 +3,51 @@ const Chat = require('./model/chat');
 // Mantenemos una lista de usuarios conectados en memoria (puedes usar Redis después)
 let usuariosOnline = []; 
 
-const socketControler = (socket) => {
-    // El socket ya está conectado aquí
+const socketController= (socket) => {
+
+        console.log("Cliente conectado:", socket.id);
+            
+//actualizar el estado
+        socket.on('user-conectado-list',(payload)=>{
+            
+            socket.usuarioRealId = payload;
+            
+            if(!usuariosOnline.includes(socket.usuarioRealId)){
+                
+                    usuariosOnline.push(socket.usuarioRealId);
+            }
+            
+            socket.broadcast.emit('lista-conectados',usuariosOnline);
+            socket.emit('lista-conectados',usuariosOnline);
 
 
-    socket.on("ultimo-chat", async (payload) => {
-        // 1. Guardamos el ID real de Mongo en el objeto socket para identificarlo
-        socket.uid = payload.id; 
+             
 
-        // 2. Agregamos al usuario a nuestra lista si no está
-        if (!usuariosOnline.includes(socket.uid)) {
-            usuariosOnline.push(socket.uid);
+        });
+//actualiza el estado
+
+        socket.on('disconnect', () => {
+        console.log("Cliente desconectado:", socket.usuarioRealId);
+        
+        if (socket.usuarioRealId) {
+            // Sacamos al usuario de la lista
+            usuariosOnline = usuariosOnline.filter(id => id !== socket.usuarioRealId);
+            
+            // Avisamos a los que se quedan que la lista cambió
+            socket.broadcast.emit('lista-conectados', usuariosOnline);
         }
-
-        // 3. Avisar a los DEMÁS que este usuario entró (para que cambien a Online)
-        socket.broadcast.emit('user-conectado', socket.uid);
-
-        // 4. IMPORTANTE: Avisar al USUARIO ACTUAL quiénes están conectados ahora mismo
-        // Esto arregla que la segunda ventana vea a la primera
-        socket.emit('lista-usuarios-preevios', usuariosOnline);
-
-        // 5. Enviar los últimos mensajes
-        const chatRes = await Chat.find().sort({ _id: -1 }).limit(10);
-        socket.emit('cargar-mensajes', chatRes);
     });
 
-    socket.on('disconnect', () => {
-        // Limpiamos la lista al desconectar
-        usuariosOnline = usuariosOnline.filter(id => id !== socket.uid);
-        socket.broadcast.emit('user-desconectado', socket.uid);
-    });
+
+    
+
+            
+
+
+    
+
+   
+    
 }
 
-module.exports = socketControler;
+module.exports = socketController;

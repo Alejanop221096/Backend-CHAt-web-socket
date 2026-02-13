@@ -31,10 +31,7 @@ const io = require('socket.io')(server, {cors: {
   }});
 io.on('connect',socketController);
 
-// 2. Usar path.join y __dirname para una ruta absoluta
 
-
-socketController(io);
 
 app.use("/", routerUser);
 
